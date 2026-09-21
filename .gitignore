@@ -1,0 +1,14 @@
+# Artefatos
+*.zip
+
+# Windows / SO
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+
+# Logs locais (o runtime grava em %LOCALAPPDATA%\GitHubPrNotifier)
+*.log
