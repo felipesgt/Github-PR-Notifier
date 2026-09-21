@@ -12,6 +12,7 @@ aprova um PR seu.
   checkout local)
 - Notificação nativa do Windows (toast) com repositório, número, título e autor
   da aprovação, incluindo um botão **Abrir PR**
+- Toast também para **novos comentários** nos seus PRs (configurável)
 - Inicia automaticamente e de forma oculta (sem janela de PowerShell) ao fazer
   logon, via Agendador de Tarefas
 - Aprovações antigas não geram notificação: só avisa aprovações *novas*
@@ -54,24 +55,28 @@ O instalador:
 Tudo o que precisa configurar é um único arquivo:
 `%LOCALAPPDATA%\GitHubPrNotifier\config.json`
 
-Ele controla a única opção disponível — o intervalo de verificação:
+Ele controla as opções disponíveis:
 
 ```json
 {
-    "intervalSeconds": 60
+    "intervalSeconds": 60,
+    "notifyComments": true
 }
 ```
 
-- O valor é em **segundos** (padrão: `60`).
-- Quanto menor, com mais frequência o `gh` é consultado (mínimo de 10s).
-- **Não precisa reiniciar nada:** ao salvar o arquivo, o novo intervalo entra em
-  vigor no próximo ciclo de verificação (junto com a atualização automática do
-  próprio arquivo durante a instalação).
+| Opção             | O que faz                                          | Padrão |
+| ----------------- | -------------------------------------------------- | ------ |
+| `intervalSeconds` | Intervalo de verificação, em segundos (mín. 10)    | `60`   |
+| `notifyComments`  | Notificar também novos comentários nos seus PRs    | `true` |
+
+- **Não precisa reiniciar nada:** ao salvar o arquivo, as mudanças entram em
+  vigor no próximo ciclo de verificação.
 
 | O que você quer          | O que fazer                                          |
 | ------------------------ | ---------------------------------------------------- |
 | Checar a cada 2 min      | altere `60` para `120` e salve o arquivo             |
-| Voltar ao padrão         | deixe `60` ou recrie o arquivo com o conteúdo acima  |
+| Parar toast de comentários | altere `notifyComments` para `false` e salve        |
+| Voltar ao padrão         | recrie o arquivo com o conteúdo acima                |
 
 ## Como funciona
 
@@ -107,8 +112,8 @@ em `%LOCALAPPDATA%\GitHubPrNotifier`).
 
 ## Limitações
 
-- Notificações só para **aprovações** (`APPROVED`) — comentários e outras
-  revisões não disparam toast
+- Notificações para **aprovações** (`APPROVED`) e **novos comentários**; outras
+  ações (labels, referências, closes) não disparam toast
 - Depende do GitHub CLI autenticado funcionando
 - É um utilitário pessoal simples: sem interface gráfica de configuração
 

@@ -17,7 +17,7 @@ function Write-Log {
 }
 
 function Get-Config {
-    $cfg = @{ intervalSeconds = 60 }
+    $cfg = @{ intervalSeconds = 60; notifyComments = $true }
     if (Test-Path $ConfigFile) {
         try {
             $raw = Get-Content $ConfigFile -Raw
@@ -25,6 +25,9 @@ function Get-Config {
                 $json = $raw | ConvertFrom-Json
                 if ($json.PSObject.Properties.Name -contains "intervalSeconds") {
                     $cfg.intervalSeconds = [int]$json.intervalSeconds
+                }
+                if ($json.PSObject.Properties.Name -contains "notifyComments") {
+                    $cfg.notifyComments = [bool]$json.notifyComments
                 }
             }
         } catch {
@@ -90,6 +93,23 @@ function Show-ApprovalToast {
         -Button $button
 }
 
+function Show-CommentToast {
+    param(
+        [string]$Repo,
+        [int]$Number,
+        [string]$Title,
+        [string]$Commenter,
+        [string]$Url
+    )
+
+    Import-Module BurntToast -ErrorAction Stop
+
+    $button = New-BTButton -Content "Abrir PR" -Arguments $Url
+    New-BurntToastNotification `
+        -Text "Novo comentário 💬", "$Repo #$Number", "$Commenter comentou em: $Title" `
+        -Button $button
+}
+
 function Ensure-Gh {
     if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
         throw "GitHub CLI (gh) não encontrado. Instale com: winget install --id GitHub.cli"
@@ -127,7 +147,7 @@ while ($true) {
             $repo = $pr.repository.nameWithOwner
             $prKey = "$repo#$($pr.number)"
 
-            $detailJson = & gh pr view $pr.url --json reviews 2>$null
+            $detailJson = & gh pr view $pr.url --json reviews,comments 2>$null
             if ($LASTEXITCODE -ne 0 -or -not $detailJson) {
                 Write-Log "Não foi possível consultar reviews de $prKey"
                 continue
@@ -159,6 +179,39 @@ while ($true) {
                         seenAt = (Get-Date).ToString("o")
                         url = $pr.url
                     }
+                }
+            }
+
+            $cfg = Get-Config
+            if ($cfg.notifyComments) {
+                $commentsSeeded = ($state['_meta'].commentsSeeded -eq $true)
+                foreach ($comment in @($detail.comments)) {
+                    $commenter = if ($comment.author.login) { $comment.author.login } else { "Alguém" }
+                    $createdAt = if ($comment.createdAt) { $comment.createdAt } else { "unknown" }
+                    $commentKey = "$prKey|comment|$commenter|$createdAt"
+
+                    if (-not $state.ContainsKey($commentKey)) {
+                        # Na primeira rotação após ativar esta feature, apenas memoriza.
+                        if (-not $firstRun -and $commentsSeeded) {
+                            Show-CommentToast `
+                                -Repo $repo `
+                                -Number $pr.number `
+                                -Title $pr.title `
+                                -Commenter $commenter `
+                                -Url $pr.url
+
+                            Write-Log "Notificado comentário: $commentKey"
+                        }
+
+                        $state[$commentKey] = @{
+                            seenAt = (Get-Date).ToString("o")
+                            url = $pr.url
+                        }
+                    }
+                }
+
+                if (-not $commentsSeeded) {
+                    $state['_meta'] = @{ commentsSeeded = $true }
                 }
             }
         }

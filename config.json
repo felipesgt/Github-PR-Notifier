@@ -1,3 +1,4 @@
 {
-    "intervalSeconds": 60
+    "intervalSeconds": 60,
+    "notifyComments": true
 }
